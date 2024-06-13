@@ -27,16 +27,6 @@ public:
         Clear();
     }
     
-    template<typename T>
-    void FillFromContainer(T& container) {
-        Node* curr = &head_;
-        for (const auto& value : container) {
-            curr->next_node = new Node(value, nullptr);
-            curr = curr->next_node;
-            ++size_;
-        }
-    }
-    
     SingleLinkedList(std::initializer_list<Type> values) {
         FillFromContainer(values);
     }
@@ -46,9 +36,10 @@ public:
     }
 
     SingleLinkedList& operator=(const SingleLinkedList& rhs) {
-        SingleLinkedList tmp(rhs);
-        Clear();
-        this->swap(tmp);
+	if (&rhs != this) {
+            SingleLinkedList tmp(rhs);
+            this->swap(tmp);
+	}
         return *this;
     }
 
@@ -89,8 +80,8 @@ public:
             tmp = head_.next_node;
             head_.next_node = head_.next_node->next_node;
             delete tmp;
-            --size_;
         }
+	size_ = 0;
     }
 
     template <typename ValueType>
@@ -130,21 +121,25 @@ public:
         }
 
         BasicIterator& operator++() noexcept {
+	    assert(node_ != nullptr);
             node_ = node_->next_node;
             return *this;
         }
 
         BasicIterator operator++(int) noexcept {
+	    assert(node_ != nullptr);
             BasicIterator copy(node_);
             node_ = node_->next_node;
             return copy;
         }
 
         [[nodiscard]] reference operator*() const noexcept {
+	    assert(node_ != nullptr);
             return node_->value;
         }
 
         [[nodiscard]] pointer operator->() const noexcept {
+	    assert(node_ != nullptr);
             return &node_->value;
         }
 
@@ -219,6 +214,17 @@ private:
     Node head_;
     size_t size_ = 0;
     Node* head_ptr_ = &head_;
+
+private:    
+    template<typename T>
+    void FillFromContainer(T& container) {
+        Node* curr = &head_;
+        for (const auto& value : container) {
+            curr->next_node = new Node(value, nullptr);
+            curr = curr->next_node;
+            ++size_;
+        }
+    }
 };
 
 template <typename Type>
@@ -231,14 +237,7 @@ bool operator==(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>&
     if (lhs.GetSize() != rhs.GetSize()) {
         return false;
     }
-    auto it_lhs = lhs.begin();
-    auto it_rhs = rhs.begin();
-    for (; it_lhs != lhs.end() && it_rhs != rhs.end(); ++it_lhs, ++it_rhs) {
-        if (*it_lhs != *it_rhs) {
-            return false;
-        }
-    }
-    return true;
+    return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin());
 }
 
 template <typename Type>
@@ -248,24 +247,12 @@ bool operator!=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>&
 
 template <typename Type>
 bool operator<(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    if (lhs.GetSize() < rhs.GetSize()) {
-        return true;
-    } else if (lhs.GetSize() > rhs.GetSize()) {
-        return false;
-    }
-    auto it_lhs = lhs.begin();
-    auto it_rhs = rhs.begin();
-    for (; it_lhs != lhs.end() && it_rhs != rhs.end(); ++it_lhs, ++it_rhs) {
-        if (*it_lhs < * it_rhs) {
-            return true;
-        }
-    }
-    return false;
+    return std::lexicographical_compare(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
 template <typename Type>
 bool operator<=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    return lhs < rhs || lhs == rhs;
+    return !(rhs < lhs);
 }
 
 template <typename Type>
@@ -275,6 +262,6 @@ bool operator>(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& 
 
 template <typename Type>
 bool operator>=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    return rhs <= lhs;
+    return !(lhs < rhs);
 }
 
